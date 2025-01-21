@@ -1,0 +1,120 @@
+name: "ITL Engine Dev"
+
+on:
+  # This build is always manually kicked off.
+  workflow_dispatch:
+
+# TODO: Remove this. This is here for testing purposes ONLY.
+  pull_request:
+    branches:
+      - dev
+
+# TODO: We can stick some of these environment variables into repo secrets.
+env:
+  ITL_WAR_HOME: '/app1/ghec-actions-runner/_work/icp-ITL/icp-ITL/build/libs'
+  ITL_LOG_HOME: '/app1/ghec-actions-runner/_work/icp-ITL/icp-ITL/build'
+  GRADLE_JAVA_HOME: '/app1/tools/java/jdk-21.0.3+9'
+  GRADLE_USER_HOME: '/app1/gradlecache'
+  NPM_CACHE_DIR: '/app1/npmcache'
+  PUPPETEER_CACHE_DIR: '/app1/puppeteercache'
+  SONAR_USER_HOME: '/app1/sonarcache'
+
+jobs:
+  build_itl_dev_engine:
+    runs-on: [ icp-ghas ]
+    name: Build a Dev engine from the dev branch
+    steps:
+      # Set up Java 21 for this build. The Setup Gradle action seems to require this.
+      # Note that we simply override this later when calling Gradle tasks.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # Set up our Gradle wrapper for this build.
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      # Chown all items in the workspace.
+      - name: Chown Workspace
+        if: always()
+        run: sudo chown -R icpbld:dce ${{ github.workspace }}
+
+      # Initial checkout of the dev branch
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Clean the workspace.
+      - name: Clean Workspace
+        run: ./gradlew clean -Dorg.gradle.daemon=false -Dgradle.user.home=${GRADLE_USER_HOME} -Dorg.gradle.java.home=${GRADLE_JAVA_HOME}
+
+      - name: Get and Save GitHub build number
+        id: build_number
+        run: echo "buildNumber=${{ github.run_number }}" >> $GITHUB_WORKSPACE/gradle.properties
+
+      - name: Print Variables Details
+        run: |
+          ./gradlew printSourceSetInformation
+          ./gradlew printVariable
+
+      # Build the ITL Dev Engine via the extract task
+      # TODO: This needs to build CMLite too
+      - name: Build ITL War Engine
+        run: ./gradlew war -Dorg.gradle.daemon=false -Dgradle.user.home=${GRADLE_USER_HOME} -Dorg.gradle.java.home=${GRADLE_JAVA_HOME}
+
+      # Move the engines onto the SCM drive
+      - name: Move War Engine to SCM Drive
+        run: |
+          echo "ITL_WAR_HOME = ${ITL_WAR_HOME}"
+          sudo cp -f ${ITL_WAR_HOME}/ITL.war /mnt/scm/Builds/ITL
+
+      # TODO: log this event
+      - name: Log WAR creation
+        run: |
+          current_time=$(date "+%Y/%m/%d - %H:%M:%S")
+          echo ${current_time} ": ITL WAR file was created" >> ${ITL_LOG_HOME}/build.log
+          sudo cp -f ${ITL_LOG_HOME}/build.log /mnt/scm/Builds/ITL
+
+      # Copy the war file into Artificatory
+      - name: Publish To Artificatory
+        run: |
+          echo  "buildNumber=${{ env.buildNumber }}"  # This line must be here for the build to work properly.
+          ./gradlew publishItlPublicationToIcp-maven-snapshotRepository -Dorg.gradle.daemon=false -Dgradle.user.home=${GRADLE_USER_HOME} -Dorg.gradle.java.home=${GRADLE_JAVA_HOME} -Ppublish_snapshot_user=icpbld -Ppublish_snapshot_password=${{secrets.ARTIFACTORY_CRED_PSW}}
+        env:
+          buildNumber: ${{ env.buildNumber }}
+
+      # TODO: Send Email
+      # Email all interested parties on success.
+      - name: Email Developers and QA on Success
+        uses: uhg-actions/action-send-mail@v4
+        if: success()
+        with:
+          server_address: elr-smtp-relay-k8s.optum.com
+          server_port: 25
+          from: icpbld@optum.com
+          reply_to: icpbld@optum.com
+          to: karl.huffaker@optum.com
+          subject: ITL dev build successful for build ${{ env.BUILD_NUMBER }}
+          body: |
+            The ITL dev build has completed successfully for build ${{ env.BUILD_NUMBER }}. Please check the SCM drive for the latest build.
+
+      - name: Email Developers and QA on Failure
+        uses: uhg-actions/action-send-mail@v4
+        if: failure()
+        with:
+          server_address: elr-smtp-relay-k8s.optum.com
+          server_port: 25
+          from: icpbld@optum.com
+          reply_to: icpbld@optum.com
+          to: karl.huffaker@optum.com
+          subject: ITL dev build failed for build ${{ env.BUILD_NUMBER }}
+          body: |
+            The ITL dev build did not complete successfully for build ${{ env.BUILD_NUMBER }}.
+
+      # Chown all items in the workspace.
+      - name: Chown Workspace
+        if: always()
+        run: sudo chown -R icpbld:dce ${{ github.workspace }}
+
