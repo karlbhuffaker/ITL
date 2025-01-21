@@ -1,0 +1,1 @@
+﻿D:\app\Tomcat9\webapps\ITL\WEB-INF\classes\powershell\vm_services\vmTestConnection.ps1 -vmName ${vmName} -adminUserName ${adminUserName} -adminPassword ${adminPassword} -vmLoggingFolderPath ${vmLoggingFolderPath} -vmLogName ${vmLogName}

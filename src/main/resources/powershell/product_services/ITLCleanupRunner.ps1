@@ -1,0 +1,2 @@
+﻿#D:\app\Tomcat9\webapps\ITL\WEB-INF\classes\powershell\product_services\ITLCleanup.ps1 -provisionFilePath 'D:\Optum\ITL\runtime\khuffak\1013\' -deleteRequestFolder 'true' -vmLoggingFolderPath 'D:\Optum\ITL\runtime\khuffak\' -vmLogName 'ITLCleanUp.log'
+D:\app\Tomcat9\webapps\ITL\WEB-INF\classes\powershell\product_services\ITLCleanup.ps1 -provisionFilePath ${provisionFilePath} -deleteRequestFolder ${deleteRequestFolder} -vmLoggingFolderPath ${vmLoggingFolderPath} -vmLogName ${vmLogName}
