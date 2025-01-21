@@ -1,0 +1,18 @@
+/**
+ * Handle the plugin repositories for all projects in the build.
+ */
+pluginManagement {
+    repositories {
+        /**
+         * Override of Maven Central to UHC main repository
+         */
+        maven {
+            name 'central'
+            url 'https://repo1.uhc.com/artifactory/repo/'
+        }
+    }
+}
+/**
+ * Root Project Build Name
+ */
+rootProject.name = 'itl'

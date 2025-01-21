@@ -1,0 +1,5 @@
+@Library(['com.optum.jenkins.pipeline.library@master', 'jenkins-shared-libraries@main']) _
+
+DDRPerformanceTest {
+    APP_NAME = 'ITL'
+}

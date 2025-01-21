@@ -1,0 +1,147 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
+buildscript {
+
+    ext {
+        moduleVersion = '1.00.0.1.+'
+
+//        defaultITLDevName = '\\\\icplabs-app-02'
+//        defaultFolder = '\\kbhTest'
+//        defaultITLRepositoryPath = '\\D$\\Optum\\ITL\\repository\\product_installation\\files'
+//        buildDir = defaultITLDevName + defaultITLRepositoryPath + defaultFolder
+
+//        filesDir="${buildDir}"
+//        println "Required application ${APPNAME}"
+//        appName = project.hasProperty('APPNAME') ? project.property('APPNAME') : 'cm'
+//        resolvedKBArtifactVersion = 'UNDEFINED'
+//        defaultBaseInstallVersion = '1.18.0.2.08.1'
+//        cmBaseInstallVersion = project.hasProperty('RELEASE') ? project.property('RELEASE') : defaultBaseInstallVersion
+//
+//        defaultKBArtifactNameCM = 'cm-prod-kb'
+//        defaultKBArtifactNameCES = 'ces-prod-kb'
+//
+//        if (appName=="cm"){
+//            kbArtifactName = project.hasProperty('KB_ARTIFACT_NAME') ? project.property('KB_ARTIFACT_NAME') : defaultKBArtifactNameCM
+//        }else{
+//            kbArtifactName = project.hasProperty('KB_ARTIFACT_NAME') ? project.property('KB_ARTIFACT_NAME') : defaultKBArtifactNameCES
+//        }
+//
+//        println "Required application $appName"
+    }
+}
+
+plugins {
+    id "idea"
+    id "base"
+    id "java"
+    id "war"
+    id 'maven-publish'
+}
+
+// Define product values
+group = 'com.optum.icp.itl-automation-services'
+def buildNumber = project.hasProperty('buildNumber') ? project.buildNumber : '0'
+version = "1.0.${buildNumber}-SNAPSHOT"
+
+repositories {
+    maven {
+        name 'central'
+        url 'https://repo1.uhc.com/artifactory/maven-repo/'
+    }
+}
+
+dependencies {
+    //phaseOneFiles group: 'com.optum.icp.freya', name: 'cm-base-install', version: "${cmBaseInstallVersion}", ext: 'zip'
+
+    // Add any dependencies your application needs
+    // For example:
+    // implementation 'org.springframework.boot:spring-boot-starter-web:2.5.0'
+    //compile group: 'javax.servlet', name: 'servlet-api', version:'2.4'
+    implementation group: 'javax.servlet', name: 'javax.servlet-api', version:'3.1.0'
+    implementation 'com.sun.mail:javax.mail:1.6.2'
+    implementation group: 'javax.mail', name: 'mail', version: '1.4.1'
+    implementation 'net.lingala.zip4j:zip4j:2.7.0'
+    implementation group: 'commons-beanutils', name: 'commons-beanutils', version: '1.9.4'
+    //implementation 'commons-io:commons-io:2.7'
+    implementation 'commons-io:commons-io:2.11.0'
+    implementation 'org.apache.commons:commons-lang3:3.11'
+    implementation 'org.apache.commons:commons-text:1.13.0'
+    //implementation 'org.json:json:20190722'
+    implementation group: 'org.json', name: 'json', version: '20230227'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.32'
+    implementation 'com.opencsv:opencsv:5.2'
+    implementation group: 'net.lingala.zip4j', name: 'zip4j', version: '2.6.1'
+}
+
+//************** General Tasks *******************************//
+
+war {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+    it.getArchiveFileName().set('ITL.war')
+    enabled = true
+    from ("help")
+    from ("web")
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'com.optum.itl.MainClass'
+    }
+}
+
+task checkWin() {
+    if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+        println "*** Windows "
+    }
+}
+
+task printSourceSetInformation(){
+
+    doLast{
+        sourceSets.each { srcSet ->
+            println "["+srcSet.name+"]"
+            print "-->Source directories: "+srcSet.allJava.srcDirs+"\n"
+            print "-->Output directories: "+srcSet.output.classesDirs.files+"\n"
+            print "-->Compile classpath:\n"
+            srcSet.compileClasspath.files.each {
+                print "  "+it.path+"\n"
+            }
+            println ""
+        }
+    }
+}
+
+task printVariable {
+    doLast {
+        println "The Gradle build number is: $buildNumber"
+    }
+}
+
+publishing {
+    publications {
+        itl(MavenPublication) {
+            artifact "${rootDir}/build/libs/ITL.war"
+            from components.java
+        }
+    }
+    repositories {
+        def contextUrl = 'https://repo1.uhc.com/artifactory'
+        if (project.hasProperty('publish_snapshot_user')
+                && project.hasProperty('publish_snapshot_password')) {
+
+            maven {
+                name = "icp-maven-snapshot"
+                url = "$contextUrl/UHG-Snapshots"
+                credentials {
+                    username = project.properties['publish_snapshot_user']
+                    password = project.properties['publish_snapshot_password']
+                }
+            }
+        } else {
+            maven {
+                name = 'maven-local'
+                url = '~/.m2/repository'
+            }
+        }
+    }
+}

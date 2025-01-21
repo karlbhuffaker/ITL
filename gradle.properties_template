@@ -1,0 +1,21 @@
+# TEMPLATE
+#------------------------------------------------------------------------
+# Copy and rename this file to gradle.properties, keeping it in the
+# root directory in order to set the required properties
+#
+
+# set product_type to either 'cm' or 'ces'
+appName=cm
+
+#set DB to either 'mssql' or 'oracle'
+# --- Standard configurations are cm/oracle and ces/mssql ---
+DB=oracle
+
+#Needed in order to build the app-linux docker image in phase 2
+TEST_TARGET=cu
+APPNAME=cm
+APPNAME_CAPS=CM
+BASEVERSION=5.4.0.2.06_CM-KB-2021_Q3A
+DBTYPE=oracle
+TAGBASE=docker.repo1.uhc.com/icp/automation
+WORKSPACE=/home/rheightm/IdeaProjects/icp-automation-services
